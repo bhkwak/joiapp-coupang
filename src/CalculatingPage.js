@@ -4,6 +4,7 @@ import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, LineElement, CategoryScale, LinearScale, PointElement } from 'chart.js';
 import { auth } from './firebaseConfig'; // Ensure you import Firebase auth
 import { onAuthStateChanged } from 'firebase/auth';
+import { Link } from 'react-router-dom';
 import { useLogout } from './utils/logout.js';
 import JoiAppLogo from './joiapplogo.png'; 
 import './css/CalculatingPage.css';
@@ -220,12 +221,43 @@ const CalculatingPage = () => {
     
     return (
         <div className="calculating-container">
-               <img src={JoiAppLogo} alt="JoiApp Logo" className="logo" />
+                <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                    className="logo-container"
+                    onClick={() => navigate('/dashboard')}
+                    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                >
+                    <img src={JoiAppLogo} alt="JoiApp Logo" style={{ height: '40px', marginRight: '12px' }} />
+                    <span className="app-name" style={{ fontSize: '20px', fontWeight: 'bold' }}>JoiApp</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                    <Link to="/settings" style={{ fontSize: '16px', textDecoration: 'none', color: '#333' }}>
+                    설정
+                    </Link>
+                    <button onClick={logout} className="logout-button">로그아웃</button>
+                </div>
+                </div>
             <h1 className="calculating-title">Calculating Predictions...</h1>
             <div className="progress-bar-container">
                 <progress value={progress} max="100"></progress>
                 <p>{progress}%</p>
             </div>
+                <div
+        className="logo-container"
+        onClick={() => navigate('/dashboard')}
+        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+      >
+        <img src={JoiAppLogo} alt="JoiApp Logo" style={{ height: '40px', marginRight: '12px' }} />
+        <span className="app-name" style={{ fontSize: '20px', fontWeight: 'bold' }}>JoiApp</span>
+      </div>
+
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <Link to="/settings" style={{ fontSize: '16px', textDecoration: 'none', color: '#333' }}>
+          설정
+        </Link>
+        <button onClick={logout} className="logout-button">로그아웃</button>
+      </div>
             {/* Display a loading spinner if result is not yet available */}
             {!result ? (
                 <div className="loading-container">

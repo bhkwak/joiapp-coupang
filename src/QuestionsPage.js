@@ -2,12 +2,16 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useLogout } from './utils/logout.js';
 import { auth, db } from './firebaseConfig';
-import { collection, addDoc, query, doc,  getDocs, orderBy, setDoc } from 'firebase/firestore';
+import { collection, addDoc, query, doc,  getDocs, orderBy, setDoc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import './css/QuestionsPage.css';
 import { GAD7_QUESTIONS, PHQ9_QUESTIONS, GAD2_QUESTIONS, PHQ2_QUESTIONS, ANSWER_OPTIONS, questionList1, questionList2, YES_NO_OPTIONS } from './utils/questions.js';
 //import { getPublicKey } from '@stellar/freighter-api';
 import JoiAppLogo from './joiapplogo.png'; 
+import { Link } from 'react-router-dom';
+import { getAuth } from "firebase/auth";
+
+
 
 const QuestionsPage = () => {
     const navigate = useNavigate();
@@ -47,8 +51,21 @@ const QuestionsPage = () => {
     const [recordingLog, setRecordingLog] = useState([]);
     const [isPHQ9Completed, setIsPHQ9Completed] = useState(false);
 
+    const [showConsentModal, setShowConsentModal] = useState(false);
+const [consentType, setConsentType] = useState(null); // 'camera' or 'microphone'
+
+const [consentState, setConsentState] = useState({
+  camera: true,
+  microphone: true,
+  voiceRecording: true,
+  emotionAI: false,
+  surveySubmission: true,
+});
+
   // 1) create a ref container for all text inputs
   const inputRefs = useRef({});
+const auth = getAuth();
+const user = auth.currentUser;
 
 
     const [userId, setUserId] = useState(null);
@@ -91,7 +108,31 @@ const QuestionsPage = () => {
         };
     }, [navigate, disableMedia]);
 
+            useEffect(() => {
+            const fetchConsents = async () => {
+                if (!user?.uid) return;
+
+                try {
+                const docRef = doc(db, "users", user.uid, "currentConsents");
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    setConsentState(snap.data());
+                }
+                } catch (error) {
+                console.error("Consent fetch error:", error);
+                }
+            };
+
+            fetchConsents();
+            }, [user?.uid]);
+
+
     const handleMediaPermissions = async () => {
+            // ① Don’t even ask the browser if the user has revoked camera consent
+        if (!consentState.camera) {
+        alert("카메라 사용에 동의하지 않으셨습니다. 설정에서 허용해주세요.");
+        return;
+        }
         try {
             mediaStream.current = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     
@@ -105,6 +146,13 @@ const QuestionsPage = () => {
      
                 startRecording(); // If applicable
                 addLog("카메라와 마이크를 활성화");
+                if (userId) {
+                await addDoc(collection(db, "users", userId, "consents"), {
+                type: "camera",
+                granted: true,
+                timestamp: new Date()
+                });
+            }
             } else {
                 console.error("Video reference is not defined.");
             }
@@ -114,6 +162,11 @@ const QuestionsPage = () => {
         }
     };
     const handleAudioMediaPermissions = async () => {
+            // ① Don’t even ask the browser if the user has revoked mic consent
+        if (!consentState.microphone) {
+        alert("마이크 사용에 동의하지 않으셨습니다. 설정에서 허용해주세요.");
+        return;
+        }
         try {
             // Request access to the microphone only
             mediaStream.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -126,6 +179,14 @@ const QuestionsPage = () => {
     
                 // Update log and state accordingly
                 addLog("마이크 활성화");
+                      // ✅ Log Microphone Consent in Firestore
+                if (userId) {
+                    await addDoc(collection(db, "users", userId, "consents"), {
+                    type: "microphone",
+                    granted: true,
+                    timestamp: new Date()
+                    });
+                }
             } else {
                 console.error("Media stream could not be created.");
             }
@@ -155,13 +216,13 @@ const QuestionsPage = () => {
     };
     // Function to start audio recording
     const startAudioRecording = async () => {
-        console.log("in startAudioRecording");
- //       stopAllMedia();
-       // mediaStream.current = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-         audioStream.current = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-        // show it to user
-  //      audio.src = window.URL.createObjectURL(audioStream);
-  //      this.audio.play();
+            // ① Skip entirely if user revoked mic consent
+        if (!consentState.microphone) {
+            console.warn("마이크 사용 동의가 없어 녹음을 시작하지 않습니다.");
+            return;
+            }
+            console.log("in startAudioRecording");
+            audioStream.current = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
 
         if (audioStream.current) {
             console.log("in startAudioRecording audioStream.curren");
@@ -294,6 +355,8 @@ const QuestionsPage = () => {
             }
         };
     }, [recognition, setAnswers]);
+
+
 const handleAudioUpload = async (audioBlob) => {
   if (!audioBlob || audioBlob.size === 0) {
     console.error("Audio is too short or empty. Please record a longer audio.");
@@ -346,9 +409,17 @@ const handleAudioUpload = async (audioBlob) => {
         }
     };
     const startRecording = () => {
-        if (!videoRef.current || !videoRef.current.srcObject) {
-          alert("마이크와 카메라를 허락 하십시요.");
-          return;
+
+
+        // ① Skip entirely if user revoked camera consent
+        if (!consentState.camera) {
+        console.warn("카메라 사용 동의가 없어 녹화를 시작하지 않습니다.");
+        return;
+        }
+        // ② Also bail if there's no live video stream
+        if (!videoRef.current?.srcObject) {
+        console.error("녹화할 비디오 스트림이 없습니다. 녹화를 건너뜁니다.");
+        return;
         }
         
         // Make sure we have a valid stream in videoRef.current.srcObject
@@ -515,6 +586,12 @@ const handleVideoUpload = async (videoBlob) => {
 
 const handleVoiceButtonClick = useCallback(
     async (question) => {
+              // focus the corresponding input
+      // ① Ensure mic consent before anything
+      if (!consentState.microphone) {
+        alert("음성 입력(마이크 사용)에 동의하지 않으셨습니다. 설정에서 허용해주세요.");
+        return;
+      }
       // focus the corresponding input
       const inputEl = inputRefs.current[question];
       if (inputEl) {
@@ -535,7 +612,7 @@ const handleVoiceButtonClick = useCallback(
         alert("마이크에 접근할 수 없습니다. 권한을 확인해주세요.");
       }
     },
-    [isRecording, startAudioRecording, startVoiceRecognition, handleAudioMediaPermissions]
+    [isRecording, startAudioRecording, startVoiceRecognition, handleAudioMediaPermissions,consentState.microphone]
   );
 
     
@@ -554,10 +631,10 @@ const handleVoiceButtonClick = useCallback(
 */
 
     const handleAnswerChange = (question, value) => {
-        if (!isCameraEnabled) {
-            alert("카메라와 마이크를 활성화.");
-            handleMediaPermissions(); // Prompt to enable camera
-            startRecording();
+    // Only insist on camera if both consented and not yet enabled
+        if (consentState.camera && !isCameraEnabled) {
+            alert("카메라 사용에 동의하셨다면 활성화해주세요.");
+            handleMediaPermissions();
             return;
         }
       //  setAnswers(prevAnswers => ({ ...prevAnswers, [question]: value }));
@@ -950,20 +1027,69 @@ saveAnswersToFirestore()
   navigate("/results");
 };
 
+    const proceedWithCameraConsent = async () => {
+    try {
+        mediaStream.current = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream.current;
+        videoRef.current.play();
+        setIsCameraEnabled(true);
+        startRecording();
+        addLog("카메라 활성화");
+
+        if (userId) {
+            await addDoc(collection(db, "users", userId, "consents"), {
+            type: "camera",
+            granted: true,
+            timestamp: new Date()
+            });
+        }
+        }
+    } catch (error) {
+        console.error("카메라 허용 실패:", error);
+        alert("카메라 접근이 거부되었습니다.");
+    }
+    };
+
+    const proceedWithMicrophoneConsent = async () => {
+    try {
+        mediaStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+        startRecording();
+        addLog("마이크 활성화");
+
+        if (userId) {
+        await addDoc(collection(db, "users", userId, "consents"), {
+            type: "microphone",
+            granted: true,
+            timestamp: new Date()
+        });
+        }
+    } catch (error) {
+        console.error("마이크 허용 실패:", error);
+        alert("마이크 접근이 거부되었습니다.");
+    }
+    };
+
     return (
         <div className="questions-page">
-            <div className="header">
-                    <div className="logo-container" onClick={() => navigate('/dashboard')}>
-                <img src={JoiAppLogo} alt="JoiApp Logo" className="logo" />
-                <span className="app-name">JoiApp</span>
-           </div>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    {userId && <p>User ID: {userId}</p>}
-                    </div>
-                <button onClick={logout} className="logout-button">
-                    Log Out
-                </button>
-            </div>
+        <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+            className="logo-container"
+            onClick={() => navigate('/dashboard')}
+            style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+        >
+            <img src={JoiAppLogo} alt="JoiApp Logo" style={{ height: '40px', marginRight: '12px' }} />
+            <span className="app-name" style={{ fontSize: '20px', fontWeight: 'bold' }}>JoiApp</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+            <Link to="/settings" style={{ fontSize: '16px', textDecoration: 'none', color: '#333' }}>
+            설정
+            </Link>
+            <button onClick={logout} className="logout-button">로그아웃</button>
+        </div>
+        </div>
+
 
 
             <div className="form-container">
@@ -973,8 +1099,13 @@ saveAnswersToFirestore()
                 
                 <div className="button-group">
          
-                    <button onClick={handleMediaPermissions}>카메라와 마이크 활성화</button>
-                    <button onClick={disableMedia}>카메라와 마이크 비활성화</button>
+                <button onClick={() => { setConsentType('camera'); setShowConsentModal(true); }}>
+                카메라 허용 요청
+                </button>
+                <button onClick={() => { setConsentType('microphone'); setShowConsentModal(true); }}>
+                마이크 허용 요청
+                </button>
+
     {/*            <button onClick={startRecording}>녹화시작</button>
                     <button onClick={stopRecording}>녹화중지</button>
         */}
@@ -1042,6 +1173,29 @@ saveAnswersToFirestore()
 
     
             </div>
+                    {showConsentModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content">
+                        <h3>카메라 및 마이크 접근 허용</h3>
+                        <p>서비스 이용을 위해 {consentType === 'camera' ? '카메라' : '마이크'} 접근이 필요합니다.<br />동의하시겠습니까?</p>
+                        <div className="modal-buttons">
+                            <button
+                            onClick={async () => {
+                                setShowConsentModal(false);
+                                if (consentType === 'camera') {
+                                await proceedWithCameraConsent();
+                                } else if (consentType === 'microphone') {
+                                await proceedWithMicrophoneConsent();
+                                }
+                            }}
+                            >
+                            예, 허용합니다
+                            </button>
+                            <button onClick={() => setShowConsentModal(false)}>아니오</button>
+                        </div>
+                        </div>
+                    </div>
+                    )}
 
         </div>
     

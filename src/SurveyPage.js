@@ -13,6 +13,10 @@ import {
 }      from 'firebase/firestore';
 
 import { useNavigate } from 'react-router-dom';
+import JoiAppLogo from './joiapplogo.png'; 
+import { useLogout } from './utils/logout.js';
+import { Link } from 'react-router-dom';
+
 // Company‐wide stats for every question
 const COMPANY_STATS = {
   A: 2,
@@ -235,7 +239,7 @@ export default function SurveyPage() {
   const [submitted, setSubmitted] = useState(false)
 
    const navigate = useNavigate();
-
+    const logout = useLogout();
   const handleChange = (qid, opt) => {
     setAnswers(a => ({ ...a, [qid]: opt }))
   }
@@ -282,6 +286,22 @@ const handleSubmit = async e => {
   if (!submitted) {
     return (
       <div style={{ maxWidth:700, margin:"40px auto", padding:20 }}>
+        <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <div
+    className="logo-container"
+    onClick={() => navigate('/dashboard')}
+    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+  >
+    <img src={JoiAppLogo} alt="JoiApp Logo" style={{ height: '40px', marginRight: '12px' }} />
+    <span className="app-name" style={{ fontSize: '20px', fontWeight: 'bold' }}>JoiApp</span>
+  </div>
+
+  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+  
+    <button onClick={logout} className="logout-button">로그아웃</button>
+  </div>
+</div>
+
         {/* 🛡️ 익명 보장 안내 */}
         <div style={{
           marginBottom:24, padding:12,
@@ -292,16 +312,33 @@ const handleSubmit = async e => {
             이 설문조사는 완전한 익명으로 진행됩니다. 여러분의 응답은 개인 식별 정보와 전혀 연결되지 않으며, 안전하게 보호됩니다.
           </p>
         </div>
-        <h1 style={{ textAlign:'center' }}>직원 설문조사</h1>
+        <h1 style={{ textAlign: 'center', marginBottom: '32px' }}>직원 설문조사</h1>
+
         <form onSubmit={handleSubmit}>
           {QUESTIONS.map(q => (
-            <fieldset key={q.id} style={{ marginBottom:24 }}>
-              <legend style={{ fontWeight:600 }}>
+            <fieldset key={q.id}   
+                  style={{
+                  marginBottom: '32px',
+                  padding: '16px',
+                  border: '1px solid #ccc',
+                  borderRadius: '8px',
+                  backgroundColor: 'transparent'
+                }}>
+              <legend style={{
+                        fontWeight: 600,
+                        fontSize: '17px',
+                        marginBottom: '12px'
+                      }}>
                 {q.id}. {q.text}
               </legend>
 
               {Object.entries(q.options).map(([opt,label])=>(
-                <label key={opt} style={{ display:'block', margin:'4px 0' }}>
+                <label key={opt}   style={{
+                        display: 'block',
+                        margin: '12px 0',
+                        fontSize: '16px',
+                        lineHeight: '1.6'
+                      }}>
                   <input
                     type="radio"
                     name={`q${q.id}`}
@@ -319,7 +356,15 @@ const handleSubmit = async e => {
                   placeholder="직접 입력"
                   value={otherTexts[q.id]||''}
                   onChange={e=>handleOtherText(q.id,e.target.value)}
-                  style={{ width:'100%', marginTop:8 }}
+                  style={{
+                      width: '100%',
+                      marginTop: 12,
+                      padding: '10px',
+                      borderRadius: '6px',
+                      border: '1px solid #ccc',
+                      fontSize: '15px',
+                      lineHeight: '1.4'
+                    }}
                 />
               )}
             </fieldset>
@@ -342,7 +387,26 @@ const handleSubmit = async e => {
   const q1 = 1
   const choice1 = answers[q1]
   return (
+    
     <div style={{ maxWidth: 600, margin: '40px auto', padding: 20 }}>
+      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <div
+    className="logo-container"
+    onClick={() => navigate('/dashboard')}
+    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+  >
+    <img src={JoiAppLogo} alt="JoiApp Logo" style={{ height: '40px', marginRight: '12px' }} />
+    <span className="app-name" style={{ fontSize: '20px', fontWeight: 'bold' }}>JoiApp</span>
+  </div>
+
+  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+    <Link to="/settings" style={{ fontSize: '16px', textDecoration: 'none', color: '#333' }}>
+      설정
+    </Link>
+    <button onClick={logout} className="logout-button">로그아웃</button>
+  </div>
+</div>
+
       <h1 style={{ textAlign: 'center' }}>통계 보기</h1>
       <h2>1. 업무로 인해 지쳤다고 느낀 빈도 (예시)</h2>
       <p>당신의 선택: <strong>{choice1}. {QUESTIONS[0].options[choice1]}</strong></p>

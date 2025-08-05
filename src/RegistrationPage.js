@@ -15,40 +15,63 @@ const RegistrationPage = () => {
   const navigate = useNavigate();
   const auth     = getAuth();
 
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+const [emailError, setEmailError] = useState('');
 
-  const handleRegister = async (email, password, confirmPassword) => {
-    // 1) basic validation
-    if (password !== confirmPassword) {
-      alert('비밀번호가 서로 일치하지 않습니다.');
-      return;
+const handleChange = e => {
+  const { name, value } = e.target;
+  setFormData(prev => ({ ...prev, [name]: value }));
+
+  if (name === 'email') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      setEmailError('올바른 이메일 형식이 아닙니다.');
+    } else {
+      setEmailError('');
     }
+  }
+};
 
-    try {
-      // 2) create the user in Firebase Auth
-      const { user } = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = user.uid;
 
-      // 3) seed a Firestore document in `users/{uid}`
-      await setDoc(doc(db, 'users', uid), {
-        email,                          // store their email
-        registeredAt:   serverTimestamp(),
-        lastLogin:      serverTimestamp(),
-        numberOfLogins: 1,              // first login
-        JoiPoints:      5,              // 5 points for signup
-        lastSurveyDate: null            // we’ll schedule first survey later
-      });
+const handleRegister = async (email, password, confirmPassword) => {
+  // 1) basic password match check
+  if (emailError) {
+  alert('이메일 형식을 확인해주세요.');
+  return;
+}
+  if (password !== confirmPassword) {
+    alert('비밀번호가 서로 일치하지 않습니다.');
+    return;
+  }
 
-      // 4) send them to the Profile page next
-      navigate('/profile');
-    } catch (error) {
-      console.error('회원가입 중 오류:', error);
-      alert('회원가입 실패: ' + error.message);
-    }
-  };
+  // 2) email format validation using regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert('올바른 이메일 형식을 입력해주세요.');
+    return;
+  }
+
+  try {
+    // 3) create the user in Firebase Auth
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
+    const uid = user.uid;
+
+    // 4) store user info in Firestore
+    await setDoc(doc(db, 'users', uid), {
+      email,
+      registeredAt: serverTimestamp(),
+      lastLogin: serverTimestamp(),
+      numberOfLogins: 1,
+      JoiPoints: 5,
+      lastSurveyDate: null,
+    });
+
+    // 5) navigate to profile
+    navigate('/profile');
+  } catch (error) {
+    console.error('회원가입 중 오류:', error);
+    alert('회원가입 실패: ' + error.message);
+  }
+};
 
   return (
     <div className="container">
@@ -79,6 +102,7 @@ const RegistrationPage = () => {
             />
             <label>이메일</label>
             <div className="bar" />
+            {emailError && <p style={{ color: 'red', fontSize: '0.8rem' }}>{emailError}</p>}
           </div>
 
           <div className="form-group">

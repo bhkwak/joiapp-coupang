@@ -1,7 +1,7 @@
 // src/coupang/ResultsPage.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate }       from 'react-router-dom';
-import { auth, db }          from './firebaseConfig';
+import { auth, db }          from '../firebaseConfig.js';
 import {
   collection,
   query,
@@ -26,8 +26,8 @@ import {
 }                            from 'chart.js';
 import 'chartjs-adapter-date-fns';
 
-import tips                 from './mentalHealthTips.js';
-import { useLogout }        from './utils/logout.js';
+import tips                 from '../mentalHealthTips.js';
+import { useLogout }        from '../utils/logout.js';
 import JoiAppLogo           from './joiapplogo.png';
 import './css/ResultsPage.css';
 
@@ -630,16 +630,23 @@ async function fetchEmotionHistories(uid) {
            A) Header + Logout
       ─────────────────────────────────────────────────────────── */}
  
-        <div className="header">
-                    <div className="logo-container" onClick={() => navigate('/dashboard')}>
-                <img src={JoiAppLogo} alt="JoiApp Logo" className="logo" />
-                <span className="app-name">JoiApp</span>
-           </div>
-   
-                <button onClick={logout} className="logout-button">
-                    Log Out
-                </button>
-            </div>
+<div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <div
+    className="logo-container"
+    onClick={() => navigate('/dashboard')}
+    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+  >
+    <img src={JoiAppLogo} alt="JoiApp Logo" style={{ height: '40px', marginRight: '12px' }} />
+    <span className="app-name" style={{ fontSize: '20px', fontWeight: 'bold' }}>JoiApp</span>
+  </div>
+
+  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+    <Link to="/settings" style={{ fontSize: '16px', textDecoration: 'none', color: '#333' }}>
+      설정
+    </Link>
+    <button onClick={logout} className="logout-button">로그아웃</button>
+  </div>
+</div>
 
 {/* ─── Page Title ───────────────────────────────────── */}
 <div style={{ textAlign: "center", margin: "40px 0 20px" }}>

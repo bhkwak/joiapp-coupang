@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useLogout } from './utils/logout.js';
 import { db, auth } from './firebaseConfig';// Import your Firebase configuration here
 import { doc, getDoc } from 'firebase/firestore';
 import './css/DashboardPage.css'; // Optional CSS file for styling
-import { useLogout } from './utils/logout.js';
+
 import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import JoiAppLogo from './joiapplogo.png'; 
+
 const DashboardPage = () =>  {
     const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
@@ -63,11 +66,22 @@ const DashboardPage = () =>  {
 
   return (
     <div className="dashboard-container">
-        <div className="logo-container" onClick={() => navigate('/dashboard')}>
-          <img src={JoiAppLogo} alt="JoiApp Logo" className="logo" />
-          <span className="app-name">JoiApp</span>
-        </div>
-        
+          <div
+        className="logo-container"
+        onClick={() => navigate('/dashboard')}
+        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+      >
+        <img src={JoiAppLogo} alt="JoiApp Logo" style={{ height: '40px', marginRight: '12px' }} />
+        <span className="app-name" style={{ fontSize: '20px', fontWeight: 'bold' }}>JoiApp</span>
+      </div>
+
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <Link to="/settings" style={{ fontSize: '16px', textDecoration: 'none', color: '#333' }}>
+          설정
+        </Link>
+        <button onClick={logout} className="logout-button">로그아웃</button>
+      </div>
+
       <div className="dashboard">
 
          <div className="header">

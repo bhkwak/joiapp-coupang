@@ -12,6 +12,7 @@ import SurveyPage     from './SurveyPage';
 import LoginPage      from './LoginPage';
 import ProfilePage    from './ProfilePage';
 import AdminPage      from './Admin/AdminPage';
+import SettingsPage    from './SettingsPage';
 
  
 
@@ -31,6 +32,7 @@ const App = () => {
         <Route path="/profile"     element={<ProfilePage />} />
         <Route path="/register" element={<RegistrationPage />} />
         <Route path="/login"       element={<LoginPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
 
         {/* protect /admin so only admin users can see it */}
      
